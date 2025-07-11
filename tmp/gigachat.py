@@ -1,5 +1,4 @@
 from langchain_gigachat.chat_models import GigaChat
-from ..config import
 from bot.config import settings
 from .base import BaseLLMClient
 
