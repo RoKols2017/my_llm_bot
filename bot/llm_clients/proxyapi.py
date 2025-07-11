@@ -2,14 +2,13 @@ import httpx
 from .base import BaseLLMClient
 from ..config import PROXYAPI_TOKEN
 
-
 class ProxyAPIClient(BaseLLMClient):
-    BASE_URL = "https://api.proxyapi.ru/v1/completions"
+    BASE_URL = "https://api.proxyapi.ru/openai/v1/chat/completions"
 
     async def ask(self, prompt: str, system_prompt: str) -> str:
         headers = {"Authorization": f"Bearer {PROXYAPI_TOKEN}"}
         payload = {
-            "model": "gpt-3.5-turbo",
+            "model": "gpt-4o",  # Или gpt-3.5-turbo, если тариф не позволяет gpt-4o
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
