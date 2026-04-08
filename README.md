@@ -1,178 +1,117 @@
 # LLM Assistant Telegram Bot
 
-**LLM Assistant** — это Telegram-бот на базе [aiogram 3.21](https://docs.aiogram.dev/en/latest/) с интеграцией нескольких LLM API (ProxyAPI.ru, Giga.Chat, Yandex и др.).  
-Бот задуман как универсальный личный помощник: с системным промптом, поддержкой разных языковых моделей и модульной архитектурой для расширения.
+Telegram-бот на `aiogram 3`, который умеет работать с двумя провайдерами:
 
----
+- `gigachat`
+- `yandex`
 
-## 🧰 Возможности
+Старые заглушки и `ProxyAPI` удалены. В репозитории осталась только рабочая интеграция с GigaChat и YandexGPT.
 
-- Быстро отвечает на вопросы пользователя, используя LLM API (по умолчанию ProxyAPI).
-- Легко масштабируется на другие LLM сервисы (Giga.Chat, Yandex и любые, для которых есть API).
-- Системный промпт: контролирует стиль и поведение модели (быстрый, остроумный, фокус на будущее).
-- Чистая архитектура — легко добавлять новые фичи и сервисы.
-- Безопасное хранение токенов через `.env`.
-- Легкий запуск и кастомизация.
+## Что изменилось по API
 
----
+- `GigaChat`: актуальная схема авторизации теперь строится через `POST /api/v2/oauth`, после чего запросы идут с `Bearer` токеном в `POST /api/v1/chat/completions`.
+- `YandexGPT`: документация уехала в `AI Studio`, но для серверной интеграции бот использует рабочий REST-запрос с `Api-Key`, `modelUri` и `messages`.
 
-## 📦 Структура проекта
+## Возможности
 
-```plaintext
+- Выбор модели через команды Telegram.
+- Отдельная настройка GigaChat и YandexGPT через `.env`.
+- Нормальная проверка конфигурации при старте.
+- Минимальная архитектура без лишних абстракций.
+
+## Структура
+
+```text
 my_llm_bot/
 ├── bot/
-│   ├── __init__.py
-│   ├── config.py            # Работа с .env и токенами
-│   ├── llm_clients/         # Клиенты для каждого LLM API
+│   ├── config.py
+│   ├── handlers/
+│   │   └── main.py
+│   ├── llm_clients/
 │   │   ├── __init__.py
 │   │   ├── base.py
-│   │   ├── proxyapi.py
 │   │   ├── gigachat.py
 │   │   └── yandex.py
-│   ├── handlers/            # Telegram-обработчики сообщений
-│   │   ├── __init__.py
-│   │   └── main.py
-│   ├── middlewares/         # (Пусто, на будущее: логирование, throttle, user-state)
-│   │   └── __init__.py
-│   ├── utils/               # (Пусто, на будущее: хелперы, форматтеры)
-│   │   └── __init__.py
-│   ├── system_prompt.py     # Системный промпт для LLM
-│   └── main.py              # Точка входа, запуск бота
-├── .env_example             # Пример переменных окружения
-├── requirements.txt         # Зависимости проекта
-└── README.md                # Документация (этот файл)
+│   ├── main.py
+│   └── system_prompt.py
+├── .env_example
+├── requirements.txt
+└── README.md
 ```
 
----
+## Быстрый старт
 
-## 🚀 Быстрый старт
+1. Установите зависимости:
 
-1. **Склонируйте проект**
-    ```\bash
-    git clone https://github.com/your-username/my_llm_bot.git
-    cd my_llm_bot
-    ```
-2. **Создайте файл окружения**
-    ```\bash
-    cp .env_example .env
-    ```
-    И заполните ваши токены в `.env`:
+```bash
+pip install -r requirements.txt
+```
 
-    ```
-    BOT_TOKEN=telegram_bot_token
-    PROXYAPI_TOKEN=your_proxyapi_token
-    GIGACHAT_TOKEN=your_gigachat_token
-    YANDEX_TOKEN=your_yandex_token
-    LLM_DEFAULT=proxyapi
-    ```
+2. Создайте `.env`:
 
-3. **Установите зависимости**
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+cp .env_example .env
+```
 
-4. **Запустите бота**
-    ```bash
-    python -m bot.main
-    ```
-    Бот заработает — напишите ему в Telegram!
+3. Заполните переменные окружения.
 
----
+Минимум для GigaChat:
 
-## ⚙️ Переменные окружения
+```env
+BOT_TOKEN=your_telegram_bot_token_here
+LLM_DEFAULT=gigachat
 
-`.env_example` содержит все необходимые переменные:
+GIGACHAT_AUTH_KEY=your_gigachat_basic_auth_key_here
+GIGACHAT_SCOPE=GIGACHAT_API_PERS
+GIGACHAT_MODEL=GigaChat
+```
 
-- `BOT_TOKEN` — токен вашего Telegram-бота
-- `PROXYAPI_TOKEN` — токен для сервиса ProxyAPI.ru
-- `GIGACHAT_TOKEN` — токен для Giga.Chat
-- `YANDEX_TOKEN` — токен для Яндекс LLM
-- `LLM_DEFAULT` — какая LLM используется по умолчанию (`proxyapi`, `gigachat` или `yandex`)
+Минимум для YandexGPT:
 
----
+```env
+BOT_TOKEN=your_telegram_bot_token_here
+LLM_DEFAULT=yandex
 
-## 🧑‍💻 Архитектура и детали реализации
+YANDEX_API_KEY=your_yandex_api_key_here
+YANDEX_FOLDER_ID=your_yandex_folder_id_here
+```
 
-### 1. LLM Клиенты (`bot/llm_clients/`)
+Если нужен явный URI модели YandexGPT:
 
-Каждый API-клиент реализует общий интерфейс `BaseLLMClient` и имеет метод `ask(prompt, system_prompt)`.
-- **ProxyAPI** — полностью реализован (готов к работе)
-- **Giga.Chat и Yandex** — шаблоны, требуют документации для финальной реализации  
-  (просто киньте API-доку, и я допишу реализацию!)
+```env
+YANDEX_MODEL_URI=gpt://<folder_id>/yandexgpt-lite/latest
+```
 
-Добавление нового сервиса — просто скопируйте любой клиент, реализуйте метод, добавьте в `LLM_CLIENTS` (см. `__init__.py`).
+4. Запустите бота:
 
-### 2. Системный промпт (`bot/system_prompt.py`)
+```bash
+python -m bot.main
+```
 
-Управляет стилем модели. По умолчанию — быстрый, остроумный, акцент на будущее.  
-Вы можете отредактировать этот промпт для своих задач.
+## Команды в Telegram
 
-### 3. Обработчики (`bot/handlers/main.py`)
+- `/start` показать справку
+- `/models` показать, какие модели настроены
+- `/model gigachat` переключиться на GigaChat
+- `/model yandex` переключиться на YandexGPT
 
-- `/start` — приветствие
-- Любой текст — обрабатывается LLM, ответ пользователя формируется через выбранную модель.
+## Переменные окружения
 
-### 4. Запуск бота (`bot/main.py`)
+- `BOT_TOKEN` - токен Telegram-бота
+- `LLM_DEFAULT` - модель по умолчанию: `gigachat` или `yandex`
+- `GIGACHAT_AUTH_KEY` - basic auth key из кабинета GigaChat API
+- `GIGACHAT_SCOPE` - обычно `GIGACHAT_API_PERS`
+- `GIGACHAT_MODEL` - имя модели GigaChat, по умолчанию `GigaChat`
+- `YANDEX_API_KEY` - API key Yandex Cloud
+- `YANDEX_FOLDER_ID` - folder ID для `modelUri`
+- `YANDEX_MODEL_URI` - необязательный полный URI модели YandexGPT
 
-Все максимально просто: подключает токен, диспетчер aiogram, роутер, запускает polling.
+## Ограничения
 
----
+- Переключение модели хранится в памяти процесса, без базы данных.
+- Автотестов в проекте пока нет.
+- Проверка реальных API-вызовов требует рабочих ключей в `.env`.
 
-## 🧩 Как подключить новые LLM
+## Безопасность
 
-1. **Добавьте файл в `bot/llm_clients/yourllm.py`**  
-   Реализуйте класс с методом `ask`, который отправляет запрос в ваш LLM API и возвращает текст ответа.
-
-2. **Импортируйте класс в `llm_clients/__init__.py`**  
-   Добавьте его в словарь `LLM_CLIENTS`.
-
-3. **Добавьте токен в `.env`** (если нужен).
-
-4. **Профит!**
-
----
-
-## 🔒 Безопасность токенов
-
-**Никогда не коммитьте реальный `.env` в публичный репозиторий!**  
-Используйте `.env_example` для примера, а .env — для реальных ключей.
-
----
-
-## 💡 Кастомизация и развитие
-
-- Хотите выбрать LLM на лету? Добавьте парсер команд (`/llm gigachat`).
-- Хотите интегрировать базы знаний, память, voice-to-text? Архитектура легко расширяется.
-- Любой обработчик, команда или функционал легко добавляются в `handlers/`.
-
----
-
-## 🛠️ Пример запроса-ответа
-
-**Пользователь:**  
-\> Придумай смешную шутку про искусственный интеллект и холодильник.
-
-**Бот:**  
-\> Почему холодильник не боится искусственного интеллекта?  
-\> Потому что знает: если что — просто “зависнет”!
-
----
-
-## 📝 TODO & планы на будущее
-
-- [ ] Реализовать поддержку Giga.Chat и Yandex
-- [ ] Добавить inline-выбор модели пользователем
-- [ ] Добавить логирование и трекинг лимитов
-- [ ] (По желанию) Красивая web-админка
-
----
-
-## 🧑‍🔧 Контакты и поддержка
-
-- Вопросы по коду, предложения — пишите issue или PR.
-- Хочется кастомный проект или интеграцию под ключ? Пишите [сюда](mailto:RoKols2017@email.com).
-
----
-
-## 👾 Быть на шаг впереди — легко, если твой бот на LLM!  
-**Код открыт для будущего. Оставляйте feedback — вместе сделаем круче!**
+Не коммитьте реальный `.env` и реальные API-ключи.
