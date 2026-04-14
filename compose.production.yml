@@ -1,0 +1,40 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-security: &default-security
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  user: "1001:1001"
+  tmpfs:
+    - /tmp:noexec,nosuid,size=100m
+
+services:
+  app:
+    <<: *default-security
+    image: ${APP_IMAGE:-my-llm-bot:local}
+    env_file:
+      - ${APP_ENV_FILE:-.env}
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import bot.main"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+          pids: 100
+        reservations:
+          cpus: "0.10"
+          memory: 64M

@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    command: ["python", "-m", "bot.main"]

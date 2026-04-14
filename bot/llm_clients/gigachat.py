@@ -29,7 +29,7 @@ class GigaChatClient(BaseLLMClient):
             "RqUID": str(uuid.uuid4()),
         }
 
-        async with httpx.AsyncClient(verify=True, timeout=30) as client:
+        async with httpx.AsyncClient(verify=False, timeout=30) as client:
             response = await client.post(
                 self.OAUTH_URL,
                 headers=headers,
@@ -58,7 +58,7 @@ class GigaChatClient(BaseLLMClient):
             "stream": False,
         }
 
-        async with httpx.AsyncClient(verify=True, timeout=60) as client:
+        async with httpx.AsyncClient(verify=False, timeout=60) as client:
             response = await client.post(self.CHAT_URL, headers=headers, json=payload)
             response.raise_for_status()
 
